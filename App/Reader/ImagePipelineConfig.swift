@@ -7,7 +7,7 @@ enum ImagePipelineConfig {
     static func configure() {
         var configuration = ImagePipeline.Configuration()
         if let dataCache = try? DataCache(name: "com.koma.reader.images") {
-            dataCache.sizeLimit = 1024 * 1024 * 1024
+            dataCache.sizeLimit = AppSettings.storedCacheLimitMB() * 1024 * 1024
             configuration.dataCache = dataCache
         }
         configuration.isProgressiveDecodingEnabled = false

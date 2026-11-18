@@ -2,6 +2,7 @@ import SwiftUI
 
 struct RootTabView: View {
     @EnvironmentObject private var env: AppEnvironment
+    @EnvironmentObject private var settings: AppSettings
 
     var body: some View {
         TabView {
@@ -9,14 +10,15 @@ struct RootTabView: View {
                 .tabItem { Label("书架", systemImage: "books.vertical") }
             BrowseView()
                 .tabItem { Label("发现", systemImage: "safari") }
-            Text("历史")
+            HistoryView(env: env)
                 .tabItem { Label("历史", systemImage: "clock") }
-            Text("下载")
+            DownloadsView()
                 .tabItem { Label("下载", systemImage: "arrow.down.circle") }
-            Text("设置")
+            SettingsView()
                 .tabItem { Label("设置", systemImage: "gearshape") }
         }
-        .tint(Theme.accent)
+        .tint(settings.accentColor)
+        .preferredColorScheme(settings.appearanceOption.colorScheme)
         .overlay { ToastHost(center: env.toast) }
     }
 }

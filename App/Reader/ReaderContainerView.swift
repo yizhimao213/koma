@@ -23,9 +23,9 @@ struct ReaderContainerView: View {
             startChapterId: startChapterId, startPage: startPage)
     }
 
-    /// Reading mode used when a manga has no stored preference. Task 8 redirects this to AppSettings.
+    /// Reading mode used when a manga has no stored preference (the AppSettings default).
     static func defaultReadingMode() -> ReadingMode {
-        .rightToLeft
+        AppSettings.storedReadingMode()
     }
 
     static func readingModeKey(for manga: MangaRef) -> String {
@@ -172,7 +172,7 @@ final class ReaderViewModel: ObservableObject, ReaderViewControllerDelegate {
     }
 
     func onAppear() {
-        UIApplication.shared.isIdleTimerDisabled = true
+        UIApplication.shared.isIdleTimerDisabled = AppSettings.storedKeepScreenOn()
         if let screen = Self.screen {
             originalBrightness = screen.brightness
             brightness = screen.brightness
