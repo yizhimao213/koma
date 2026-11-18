@@ -16,7 +16,7 @@ struct RootTabView: View {
     var body: some View {
         TabView(selection: $selection) {
             page(.library) { LibraryView(env: env) }
-            page(.discover) { BrowseView() }
+            page(.discover) { DiscoverView(env: env) }
             page(.history) { HistoryView(env: env) }
             page(.downloads) { DownloadsView() }
             page(.settings) { SettingsView() }
