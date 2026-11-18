@@ -103,6 +103,15 @@ protocol MangaSource {
 - 插件可以声明自己是否需要 WebView 登录或过盾验证（Cloudflare），需要时 App 弹出内置 `WKWebView`，让用户手动通过验证，然后把 Cookie 共享给 `fetch` 使用。
 - 仓库里提供一份**插件开发文档 + 一个示例插件**（以 MangaDex 为例重写一遍），不附带任何第三方站点的插件。
 
+**18+ 内容（2026-11-18 追加需求）：**
+
+- 「设置 → 内容」中新增「显示 18+ 内容」开关，**默认关闭**，第一次打开时弹出确认框（"我已年满 18 岁"）。
+- 开关关闭时：MangaDex 请求只带 `contentRating[]=safe&contentRating[]=suggestive`；声明了 `nsfw: true` 的插件源在发现页隐藏；书架上已有的 18+ 漫画不受影响。
+- 开关打开时：MangaDex 额外带上 `erotica` 和 `pornographic`；发现页中 18+ 源的图标上显示「18+」角标；漫画详情页显示内容分级标签。
+- 插件的 `index.json` 和插件元数据新增 `nsfw: Bool` 字段。
+- 内置源范围不变：MangaDex 本身就提供 18+ 分级内容；其他 18+ 站点由用户通过插件仓库自行添加，仓库里不附带这些站点的爬虫。
+- 落地阶段：MangaDex 分级参数放在 M2，插件 `nsfw` 字段放在 M3，设置开关放在 M2。
+
 ### 5.3 信息架构（5 个底部 Tab）
 
 ```
