@@ -1,11 +1,13 @@
 import SwiftUI
 
 struct RootTabView: View {
+    @EnvironmentObject private var env: AppEnvironment
+
     var body: some View {
         TabView {
-            Text("书架")
+            LibraryView(library: env.library)
                 .tabItem { Label("书架", systemImage: "books.vertical") }
-            Text("发现")
+            BrowseView()
                 .tabItem { Label("发现", systemImage: "safari") }
             Text("历史")
                 .tabItem { Label("历史", systemImage: "clock") }
@@ -14,5 +16,7 @@ struct RootTabView: View {
             Text("设置")
                 .tabItem { Label("设置", systemImage: "gearshape") }
         }
+        .tint(Theme.accent)
+        .overlay { ToastHost(center: env.toast) }
     }
 }
