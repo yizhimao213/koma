@@ -182,7 +182,7 @@ final class LibraryRepositoryTests: XCTestCase {
         XCTAssertEqual(recent.first?.1.chapterId, "a-c2")
     }
 
-    func testUpsertWithoutPruneKeeps()throws {
+    func testUpsertWithoutPruneKeeps() throws {
         let repo = LibraryRepository(try AppDatabase.inMemory())
         let a = makeManga("a", title: "Alpha")
         try repo.upsert(details: a.0, chapters: a.1)

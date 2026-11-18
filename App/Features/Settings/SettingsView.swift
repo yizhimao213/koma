@@ -12,8 +12,11 @@ struct SettingsView: View {
     @State private var apiInvalid = false
     @State private var uploadsInvalid = false
     @State private var confirmAdult = false
+    @FocusState private var focusedField: URLField?
     @State private var probing = false
     @State private var probeResults: [ProbeResult] = []
+
+    private enum URLField: Hashable { case api, uploads }
 
     private struct LanguageOption {
         let code: String
@@ -121,12 +124,17 @@ struct SettingsView: View {
         }
     }
 
+    private func commitDrafts() {
+        commitURL(draft: $apiDraft, invalid: $apiInvalid, store: .apiBaseURL)
+        commitURL(draft: $uploadsDraft, invalid: $uploadsInvalid, store: .uploadsBaseURL)
+    }
+
     private func runProbe() {
         guard !probing else { return }
         probing = true
         probeResults = []
         let network = AppSettings.currentNetworkSettings(isExpensive: NetworkPathMonitor.isExpensiveSnapshot)
-        Task {
+        Task { @MainActor in
             let probe = ConnectivityProbe(
                 client: URLSessionHTTPClient(maxRetries: 0),
                 settings: network,
@@ -174,15 +182,26 @@ struct SettingsView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         TextField(NetworkSettings.default.apiBaseURL.absoluteString, text: $apiDraft)
                             .urlFieldStyle()
+                            .focused($focusedField, equals: .api)
+                            .onChange(of: apiDraft) { _ in apiInvalid = false }
                             .onSubmit { commitURL(draft: $apiDraft, invalid: $apiInvalid, store: \.apiBaseURL) }
                         if apiInvalid { invalidLabel }
                     }
                     VStack(alignment: .leading, spacing: 4) {
                         TextField(NetworkSettings.default.uploadsBaseURL.absoluteString, text: $uploadsDraft)
                             .urlFieldStyle()
+                            .focused($focusedField, equals: .uploads)
+                            .onChange(of: uploadsDraft) { _ in uploadsInvalid = false }
                             .onSubmit { commitURL(draft: $uploadsDraft, invalid: $uploadsInvalid, store: \.uploadsBaseURL) }
                         if uploadsInvalid { invalidLabel }
                     }
+                    Button("恢复默认") {
+                        apiDraft = ""
+                        uploadsDraft = ""
+                        settings.apiBaseURL = ""
+                        settings.uploadsBaseURL = ""
+                    }
+                    .disabled(apiDraft.isEmpty && uploadsDraft.isEmpty)
                     Picker("省流模式", selection: $settings.dataSaverMode) {
                         Text("自动").tag("auto")
                         Text("开").tag("on")
@@ -238,6 +257,8 @@ struct SettingsView: View {
             .navigationTitle("设置")
             .animation(Theme.spring, value: settings.accentHex)
         }
+        .onChange(of: focusedField) { _ in commitDrafts() }
+        .onDisappear { commitDrafts() }
         .onAppear {
             apiDraft = settings.apiBaseURL
             uploadsDraft = settings.uploadsBaseURL
@@ -289,7 +310,7 @@ struct SettingsView: View {
 
     private func refreshCacheSize() {
         let cache = ImagePipeline.shared.configuration.dataCache as? DataCache
-        Task {
+        Task { @MainActor in
             let size = await Task.detached(priority: .utility) { cache?.totalSize ?? 0 }.value
             cacheBytes = size
         }

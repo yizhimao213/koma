@@ -77,7 +77,7 @@ final class LibraryUpdaterTests: XCTestCase {
         XCTAssertTrue(try repo.isRead(chapters[0]))
     }
 
-    func testUpdaterSkipsLocal()async throws {
+    func testUpdaterSkipsLocal() async throws {
         let repo = LibraryRepository(try AppDatabase.inMemory())
         let ref = try seed(repo, sourceId: "local", id: "l1", chapterIds: ["c1"])
         let recorder = CallRecorder()

@@ -10,15 +10,10 @@ private final class StubClient: HTTPClient, @unchecked Sendable {
         self.handler = handler
     }
 
-    var requests: [URLRequest] {
-        lock.lock(); defer { lock.unlock() }
-        return recorded
-    }
+    var requests: [URLRequest] { lock.withLock { recorded } }
 
     func data(for request: URLRequest) async throws -> (Data, HTTPURLResponse) {
-        lock.lock()
-        recorded.append(request)
-        lock.unlock()
+        lock.withLock { recorded.append(request) }
         let body = try handler(request)
         let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
         return (Data(body.utf8), response)

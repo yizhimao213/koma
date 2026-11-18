@@ -8,10 +8,10 @@ private final class ProbeClient: HTTPClient, @unchecked Sendable {
 
     init(handler: @escaping @Sendable (URLRequest) throws -> Int) { self.handler = handler }
 
-    var requests: [URLRequest] { lock.lock(); defer { lock.unlock() }; return recorded }
+    var requests: [URLRequest] { lock.withLock { recorded } }
 
     func data(for request: URLRequest) async throws -> (Data, HTTPURLResponse) {
-        lock.lock(); recorded.append(request); lock.unlock()
+        lock.withLock { recorded.append(request) }
         let status = try handler(request)
         let response = HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil, headerFields: nil)!
         return (Data(), response)
