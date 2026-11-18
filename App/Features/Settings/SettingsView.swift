@@ -125,8 +125,8 @@ struct SettingsView: View {
     }
 
     private func commitDrafts() {
-        commitURL(draft: $apiDraft, invalid: $apiInvalid, store: .apiBaseURL)
-        commitURL(draft: $uploadsDraft, invalid: $uploadsInvalid, store: .uploadsBaseURL)
+        commitURL(draft: $apiDraft, invalid: $apiInvalid, store: \AppSettings.apiBaseURL)
+        commitURL(draft: $uploadsDraft, invalid: $uploadsInvalid, store: \AppSettings.uploadsBaseURL)
     }
 
     private func runProbe() {
@@ -184,7 +184,7 @@ struct SettingsView: View {
                             .urlFieldStyle()
                             .focused($focusedField, equals: .api)
                             .onChange(of: apiDraft) { _ in apiInvalid = false }
-                            .onSubmit { commitURL(draft: $apiDraft, invalid: $apiInvalid, store: \.apiBaseURL) }
+                            .onSubmit { commitURL(draft: $apiDraft, invalid: $apiInvalid, store: \AppSettings.apiBaseURL) }
                         if apiInvalid { invalidLabel }
                     }
                     VStack(alignment: .leading, spacing: 4) {
@@ -192,7 +192,7 @@ struct SettingsView: View {
                             .urlFieldStyle()
                             .focused($focusedField, equals: .uploads)
                             .onChange(of: uploadsDraft) { _ in uploadsInvalid = false }
-                            .onSubmit { commitURL(draft: $uploadsDraft, invalid: $uploadsInvalid, store: \.uploadsBaseURL) }
+                            .onSubmit { commitURL(draft: $uploadsDraft, invalid: $uploadsInvalid, store: \AppSettings.uploadsBaseURL) }
                         if uploadsInvalid { invalidLabel }
                     }
                     Button("恢复默认") {
