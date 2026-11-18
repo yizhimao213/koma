@@ -4,6 +4,10 @@ import SwiftUI
 struct KomaApp: App {
     @StateObject private var env = AppEnvironment()
 
+    init() {
+        ImagePipelineConfig.configure()
+    }
+
     var body: some Scene {
         WindowGroup {
             RootTabView()

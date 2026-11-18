@@ -64,7 +64,7 @@ struct MangaDetailView: View {
         }
         .task { await vm.load() }
         .fullScreenCover(item: $route, onDismiss: { vm.refreshState() }) { route in
-            ReaderPlaceholderView(
+            ReaderContainerView(
                 manga: ref,
                 chapters: vm.chapters,
                 startChapterId: route.chapterId,
@@ -280,31 +280,6 @@ struct MangaDetailView: View {
                 Label(isRead ? "标记未读" : "标记已读", systemImage: isRead ? "circle" : "checkmark.circle")
             }
             .tint(Theme.accent)
-        }
-    }
-}
-
-/// Stand-in for the reader until Task 7 swaps it for `ReaderContainerView` (same init).
-struct ReaderPlaceholderView: View {
-    let manga: MangaRef
-    let chapters: [Chapter]
-    let startChapterId: String
-    let startPage: Int
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        ZStack(alignment: .topTrailing) {
-            Color.black.ignoresSafeArea()
-            Button {
-                dismiss()
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.white)
-                    .frame(width: 36, height: 36)
-                    .background(Circle().fill(Color.white.opacity(0.18)))
-            }
-            .padding(16)
         }
     }
 }
