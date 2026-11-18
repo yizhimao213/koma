@@ -4,9 +4,11 @@ import GRDB
 /// Only holds a thread-safe GRDB `DatabaseWriter`.
 public final class HistoryRepository: @unchecked Sendable {
     private let writer: DatabaseWriter
+    private let coverResolver: CoverURLResolver
 
-    public init(_ database: AppDatabase) {
+    public init(_ database: AppDatabase, coverResolver: CoverURLResolver = CoverURLResolver()) {
         self.writer = database.writer
+        self.coverResolver = coverResolver
     }
 
     public func save(_ ref: MangaRef, progress: ReadingProgress) throws {
@@ -28,8 +30,8 @@ public final class HistoryRepository: @unchecked Sendable {
                 arguments: [progress.updatedAt, ref.sourceId, ref.id])
             if progress.pageIndex == progress.pageCount - 1 {
                 try db.execute(
-                    sql: "UPDATE chapter SET isRead = 1 WHERE sourceId = ? AND id = ?",
-                    arguments: [ref.sourceId, progress.chapterId])
+                    sql: "UPDATE chapter SET isRead = 1 WHERE sourceId = ? AND mangaId = ? AND id = ?",
+                    arguments: [ref.sourceId, ref.id, progress.chapterId])
             }
         }
     }
@@ -45,7 +47,8 @@ public final class HistoryRepository: @unchecked Sendable {
     }
 
     public func recent(limit: Int) throws -> [(MangaRef, ReadingProgress)] {
-        try writer.read { db in
+        let resolver = coverResolver
+        return try writer.read { db in
             let rows = try Row.fetchAll(db, sql: """
                 SELECT h.chapterId, h.pageIndex, h.pageCount, h.updatedAt,
                        m.sourceId, m.id, m.title, m.coverURL
@@ -54,7 +57,7 @@ public final class HistoryRepository: @unchecked Sendable {
                 ORDER BY h.updatedAt DESC
                 LIMIT ?
                 """, arguments: [limit])
-            return rows.map { (MangaRef(row: $0), HistoryRepository.progress(from: $0)) }
+            return rows.map { (MangaRef(row: $0, resolver: resolver), HistoryRepository.progress(from: $0)) }
         }
     }
 

@@ -4,14 +4,17 @@ import GRDB
 /// Only holds a thread-safe GRDB `DatabaseWriter`.
 public final class LibraryRepository: @unchecked Sendable {
     private let writer: DatabaseWriter
+    private let coverResolver: CoverURLResolver
 
-    public init(_ database: AppDatabase) {
+    public init(_ database: AppDatabase, coverResolver: CoverURLResolver = CoverURLResolver()) {
         self.writer = database.writer
+        self.coverResolver = coverResolver
     }
 
     public func upsert(details: MangaDetails, chapters: [Chapter]) throws {
         let tagsData = try JSONEncoder().encode(details.tags)
         let tagsJSON = String(data: tagsData, encoding: .utf8) ?? "[]"
+        let storedCover = coverResolver.storedString(for: details.ref.coverURL)
         try writer.write { db in
             try db.execute(sql: """
                 INSERT INTO manga (sourceId, id, title, coverURL, author, description, tags, status, inLibrary, addedAt)
@@ -25,15 +28,14 @@ public final class LibraryRepository: @unchecked Sendable {
                     status = excluded.status
                 """, arguments: [
                     details.ref.sourceId, details.ref.id, details.ref.title,
-                    details.ref.coverURL?.absoluteString, details.author, details.description,
+                    storedCover, details.author, details.description,
                     tagsJSON, details.status.rawValue, Date()
                 ])
             for chapter in chapters {
                 try db.execute(sql: """
                     INSERT INTO chapter (sourceId, mangaId, id, title, number, idx, isRead)
                     VALUES (?, ?, ?, ?, ?, ?, 0)
-                    ON CONFLICT(sourceId, id) DO UPDATE SET
-                        mangaId = excluded.mangaId,
+                    ON CONFLICT(sourceId, mangaId, id) DO UPDATE SET
                         title = excluded.title,
                         number = excluded.number,
                         idx = excluded.idx
@@ -50,7 +52,7 @@ public final class LibraryRepository: @unchecked Sendable {
             try db.execute(sql: """
                 INSERT OR IGNORE INTO manga (sourceId, id, title, coverURL, tags, status, inLibrary, addedAt)
                 VALUES (?, ?, ?, ?, '[]', 'unknown', 0, ?)
-                """, arguments: [ref.sourceId, ref.id, ref.title, ref.coverURL?.absoluteString, Date()])
+                """, arguments: [ref.sourceId, ref.id, ref.title, coverResolver.storedString(for: ref.coverURL), Date()])
             if value {
                 try db.execute(
                     sql: "UPDATE manga SET inLibrary = 1, addedAt = ? WHERE sourceId = ? AND id = ? AND inLibrary = 0",
@@ -64,17 +66,19 @@ public final class LibraryRepository: @unchecked Sendable {
     }
 
     public func items(categoryId: Int64?, sort: LibrarySort) throws -> [LibraryEntry] {
-        try writer.read { db in
-            try LibraryRepository.fetchItems(db, categoryId: categoryId, sort: sort)
+        let resolver = coverResolver
+        return try writer.read { db in
+            try LibraryRepository.fetchItems(db, categoryId: categoryId, sort: sort, resolver: resolver)
         }
     }
 
     public func observeItems(categoryId: Int64?, sort: LibrarySort) -> AsyncStream<[LibraryEntry]> {
         let reader: DatabaseReader = writer
+        let resolver = coverResolver
         return AsyncStream { continuation in
             let observation = ValueObservation
                 .tracking { db in
-                    try LibraryRepository.fetchItems(db, categoryId: categoryId, sort: sort)
+                    try LibraryRepository.fetchItems(db, categoryId: categoryId, sort: sort, resolver: resolver)
                 }
                 .removeDuplicates()
             let cancellable = observation.start(
@@ -153,8 +157,8 @@ public final class LibraryRepository: @unchecked Sendable {
         try writer.read { db in
             try Bool.fetchOne(
                 db,
-                sql: "SELECT isRead FROM chapter WHERE sourceId = ? AND id = ?",
-                arguments: [chapter.sourceId, chapter.id]) ?? false
+                sql: "SELECT isRead FROM chapter WHERE sourceId = ? AND mangaId = ? AND id = ?",
+                arguments: [chapter.sourceId, chapter.mangaId, chapter.id]) ?? false
         }
     }
 
@@ -162,8 +166,8 @@ public final class LibraryRepository: @unchecked Sendable {
         try writer.write { db in
             for chapter in chapters {
                 try db.execute(
-                    sql: "UPDATE chapter SET isRead = ? WHERE sourceId = ? AND id = ?",
-                    arguments: [read, chapter.sourceId, chapter.id])
+                    sql: "UPDATE chapter SET isRead = ? WHERE sourceId = ? AND mangaId = ? AND id = ?",
+                    arguments: [read, chapter.sourceId, chapter.mangaId, chapter.id])
             }
         }
     }
@@ -178,7 +182,7 @@ public final class LibraryRepository: @unchecked Sendable {
         }
     }
 
-    static func fetchItems(_ db: Database, categoryId: Int64?, sort: LibrarySort) throws -> [LibraryEntry] {
+    static func fetchItems(_ db: Database, categoryId: Int64?, sort: LibrarySort, resolver: CoverURLResolver) throws -> [LibraryEntry] {
         var sql = """
             SELECT m.sourceId, m.id, m.title, m.coverURL, m.lastReadAt,
                 (SELECT COUNT(*) FROM chapter c
@@ -207,7 +211,7 @@ public final class LibraryRepository: @unchecked Sendable {
         }
         let rows = try Row.fetchAll(db, sql: sql, arguments: arguments)
         var items = rows.map { row -> LibraryEntry in
-            LibraryEntry(ref: MangaRef(row: row), unreadCount: row["unreadCount"], lastReadAt: row["lastReadAt"])
+            LibraryEntry(ref: MangaRef(row: row, resolver: resolver), unreadCount: row["unreadCount"], lastReadAt: row["lastReadAt"])
         }
         if sort == .title {
             items.sort { $0.ref.title.localizedCaseInsensitiveCompare($1.ref.title) == .orderedAscending }

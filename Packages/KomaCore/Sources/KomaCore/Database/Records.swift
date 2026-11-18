@@ -64,13 +64,13 @@ public struct ReadingProgress: Equatable, Sendable {
 }
 
 extension MangaRef {
-    init(row: Row) {
+    init(row: Row, resolver: CoverURLResolver) {
         let cover: String? = row["coverURL"]
         self.init(
             sourceId: row["sourceId"],
             id: row["id"],
             title: row["title"],
-            coverURL: cover.flatMap { URL(string: $0) }
+            coverURL: resolver.resolve(stored: cover)
         )
     }
 }

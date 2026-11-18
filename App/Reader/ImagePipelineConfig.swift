@@ -20,14 +20,16 @@ enum ImagePipelineConfig {
 /// Builds the image requests for reader pages. Cells and the prefetcher must use the same
 /// factory so prefetched images hit the memory cache.
 enum PageImageRequest {
-    /// - Parameter viewSize: the reader viewport in points; images are downsampled to it.
+    /// - Parameter viewSize: the reader viewport in points; paged images are downsampled to 2x it, webtoon to its width.
     static func make(for page: PageRef, mode: ReadingMode, viewSize: CGSize, priority: ImageRequest.Priority = .normal) -> ImageRequest {
         let processor: any ImageProcessing
         if mode == .webtoon {
             // Strips are much taller than the screen: fit the width only.
             processor = ImageProcessors.Resize(width: viewSize.width, unit: .points, upscale: false)
         } else {
-            processor = ImageProcessors.Resize(size: viewSize, unit: .points, contentMode: .aspectFit, upscale: false)
+            // 2x the viewport: the paged cell allows pinch zoom, so keep headroom for sharpness.
+            let zoomSize = CGSize(width: viewSize.width * 2, height: viewSize.height * 2)
+            processor = ImageProcessors.Resize(size: zoomSize, unit: .points, contentMode: .aspectFit, upscale: false)
         }
         if page.headers.isEmpty {
             return ImageRequest(url: page.url, processors: [processor], priority: priority)

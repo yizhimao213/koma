@@ -43,9 +43,8 @@ public final class AppDatabase {
                     number DOUBLE,
                     idx INTEGER NOT NULL,
                     isRead BOOLEAN NOT NULL DEFAULT 0,
-                    PRIMARY KEY (sourceId, id)
+                    PRIMARY KEY (sourceId, mangaId, id)
                 );
-                CREATE INDEX chapter_on_manga ON chapter (sourceId, mangaId);
                 CREATE TABLE category (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     name TEXT NOT NULL UNIQUE,

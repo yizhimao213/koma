@@ -96,4 +96,70 @@ final class LibraryRepositoryTests: XCTestCase {
         try repo.setInLibrary(a.0.ref, false)
         XCTAssertFalse(try repo.isInLibrary(a.0.ref))
     }
+
+    func testSameChapterIdsAcrossMangaAreIndependent() throws {
+        let db = try AppDatabase.inMemory()
+        let repo = LibraryRepository(db)
+        let history = HistoryRepository(db)
+        func manga(_ id: String) -> (MangaDetails, [Chapter]) {
+            let ref = MangaRef(sourceId: "local", id: id, title: id)
+            return (MangaDetails(ref: ref), [
+                Chapter(id: "c0001", mangaId: id, sourceId: "local", title: "One", number: nil, index: 0),
+                Chapter(id: "c0002", mangaId: id, sourceId: "local", title: "Two", number: nil, index: 1)
+            ])
+        }
+        let a = manga("A")
+        let b = manga("B")
+        try repo.upsert(details: a.0, chapters: a.1)
+        try repo.setInLibrary(a.0.ref, true)
+        try repo.markRead([a.1[0]], true)
+        try repo.upsert(details: b.0, chapters: b.1)
+        try repo.setInLibrary(b.0.ref, true)
+
+        XCTAssertTrue(try repo.isRead(a.1[0]))
+        XCTAssertFalse(try repo.isRead(b.1[0]))
+        XCTAssertEqual(try repo.chapters(for: a.0.ref).map(\.id), ["c0001", "c0002"])
+        XCTAssertEqual(try repo.chapters(for: b.0.ref).map(\.id), ["c0001", "c0002"])
+        let unread = Dictionary(uniqueKeysWithValues:
+            try repo.items(categoryId: nil, sort: .title).map { ($0.ref.id, $0.unreadCount) })
+        XCTAssertEqual(unread, ["A": 1, "B": 2])
+
+        // Saving B's last page must not mark A's chapter read.
+        try history.save(b.0.ref, progress: ReadingProgress(chapterId: "c0002", pageIndex: 4, pageCount: 5))
+        XCTAssertTrue(try repo.isRead(b.1[1]))
+        XCTAssertFalse(try repo.isRead(a.1[1]))
+        XCTAssertEqual(try repo.readChapterIds(for: a.0.ref), ["c0001"])
+    }
+
+    func testLocalCoverStoredRelativeAndResolved() throws {
+        let db = try AppDatabase.inMemory()
+        let rootA = URL(fileURLWithPath: "/containerA/Documents/Library", isDirectory: true)
+        let rootB = URL(fileURLWithPath: "/containerB/Documents/Library", isDirectory: true)
+        let writerRepo = LibraryRepository(db, coverResolver: CoverURLResolver(libraryRoot: rootA))
+        let cover = rootA.appendingPathComponent("m1/c0001/0001.jpg")
+        let ref = MangaRef(sourceId: "local", id: "m1", title: "One", coverURL: cover)
+        try writerRepo.upsert(details: MangaDetails(ref: ref), chapters: [])
+        try writerRepo.setInLibrary(ref, true)
+
+        let stored: String? = try db.writer.read {
+            try String.fetchOne($0, sql: "SELECT coverURL FROM manga WHERE id = 'm1'")
+        }
+        XCTAssertEqual(stored, "local-library:/m1/c0001/0001.jpg")
+
+        let readerRepo = LibraryRepository(db, coverResolver: CoverURLResolver(libraryRoot: rootB))
+        let item = try XCTUnwrap(readerRepo.items(categoryId: nil, sort: .title).first)
+        XCTAssertEqual(item.ref.coverURL?.path, "/containerB/Documents/Library/m1/c0001/0001.jpg")
+
+        let history = HistoryRepository(db, coverResolver: CoverURLResolver(libraryRoot: rootB))
+        try history.save(ref, progress: ReadingProgress(chapterId: "c0001", pageIndex: 0, pageCount: 3))
+        XCTAssertEqual(try history.recent(limit: 5).first?.0.coverURL?.path,
+                       "/containerB/Documents/Library/m1/c0001/0001.jpg")
+    }
+
+    func testRemoteCoverPassesThrough() throws {
+        let resolver = CoverURLResolver(libraryRoot: URL(fileURLWithPath: "/x/Library"))
+        let url = URL(string: "https://example.com/c.jpg")
+        XCTAssertEqual(resolver.storedString(for: url), "https://example.com/c.jpg")
+        XCTAssertEqual(resolver.resolve(stored: "https://example.com/c.jpg"), url)
+    }
 }

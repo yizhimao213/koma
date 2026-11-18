@@ -37,6 +37,7 @@ private struct ReaderScreen: View {
     @Environment(\.accentColor) private var accent
     @StateObject private var model: ReaderViewModel
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
 
     init(env: AppEnvironment, manga: MangaRef, chapters: [Chapter], startChapterId: String, startPage: Int) {
         _model = StateObject(wrappedValue: ReaderViewModel(
@@ -60,6 +61,13 @@ private struct ReaderScreen: View {
         .task { await model.start() }
         .onAppear { model.onAppear() }
         .onDisappear { model.onDisappear() }
+        .onChange(of: scenePhase) { phase in
+            switch phase {
+            case .background: model.onEnterBackground()
+            case .active: model.onBecomeActive()
+            default: break
+            }
+        }
     }
 
     @ViewBuilder
@@ -187,6 +195,20 @@ final class ReaderViewModel: ObservableObject, ReaderViewControllerDelegate {
             screen.brightness = originalBrightness
         }
         originalBrightness = nil
+    }
+
+
+    /// Persist progress and give the system its brightness back while the app is not visible.
+    func onEnterBackground() {
+        flushSave()
+        if let originalBrightness, let screen = Self.screen {
+            screen.brightness = originalBrightness
+        }
+    }
+
+    func onBecomeActive() {
+        guard originalBrightness != nil else { return }
+        Self.screen?.brightness = brightness
     }
 
     private static var screen: UIScreen? {

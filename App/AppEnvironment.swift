@@ -20,18 +20,27 @@ final class AppEnvironment: ObservableObject {
         try? fm.createDirectory(at: libraryRoot, withIntermediateDirectories: true)
 
         let database: AppDatabase
+        var databaseFellBack = false
         if let onDisk = try? AppDatabase.onDisk(at: support.appendingPathComponent("koma.sqlite")) {
             database = onDisk
         } else if let memory = try? AppDatabase.inMemory() {
             database = memory
+            databaseFellBack = true
         } else {
             fatalError("Unable to create database")
         }
         db = database
-        library = LibraryRepository(database)
-        history = HistoryRepository(database)
+        let resolver = CoverURLResolver(libraryRoot: libraryRoot)
+        library = LibraryRepository(database, coverResolver: resolver)
+        history = HistoryRepository(database, coverResolver: resolver)
         sources = SourceRegistry(sources: [LocalSource(libraryRoot: libraryRoot)])
         importer = ImportService(libraryRoot: libraryRoot, library: library)
+        if databaseFellBack {
+            Task { [toast] in
+                try? await Task.sleep(nanoseconds: 800_000_000)
+                toast.show("数据库打开失败，本次修改不会被保存")
+            }
+        }
     }
 
     /// Imports the given files and reports the outcome with a toast.

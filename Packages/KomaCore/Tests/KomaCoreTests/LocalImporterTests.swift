@@ -121,4 +121,19 @@ final class LocalImporterTests: XCTestCase {
         XCTAssertEqual(decodeZipEntryName(raw, isUTF8Flag: true), "第1话/01.jpg")
         XCTAssertEqual(decodeZipEntryName(raw, isUTF8Flag: false), "第1话/01.jpg")
     }
+
+    func testImportGBKEncodedArchiveOrdersChaptersNaturally() throws {
+        let gb = String.Encoding(rawValue: CFStringConvertEncodingToNSStringEncoding(
+            CFStringEncoding(CFStringEncodings.GB_18030_2000.rawValue)))
+        let zip = work.appendingPathComponent("GBK.cbz")
+        try LocalTestSupport.makeRawNameZip(at: zip, entries: [
+            (name: "第10话/01.jpg".data(using: gb)!, data: LocalTestSupport.fakeImage("ten")),
+            (name: "第2话/01.jpg".data(using: gb)!, data: LocalTestSupport.fakeImage("two"))
+        ])
+        let ref = try LocalImporter(libraryRoot: library).importItem(at: zip)
+        XCTAssertEqual(pageFiles(ref), ["0001.jpg", "0002.jpg"])
+        let dir = library.appendingPathComponent(ref.id).appendingPathComponent("c0001")
+        XCTAssertEqual(try Data(contentsOf: dir.appendingPathComponent("0001.jpg")), LocalTestSupport.fakeImage("two"))
+        XCTAssertEqual(try Data(contentsOf: dir.appendingPathComponent("0002.jpg")), LocalTestSupport.fakeImage("ten"))
+    }
 }
