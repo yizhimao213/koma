@@ -8,6 +8,9 @@ final class AppEnvironment: ObservableObject {
     let history: HistoryRepository
     let sources: SourceRegistry
     let importer: ImportService
+    let updater: LibraryUpdater
+    let browseCache: BrowseCache
+    let pathMonitor = NetworkPathMonitor()
     let toast = ToastCenter()
     @Published private(set) var importingCount = 0
 
@@ -33,7 +36,18 @@ final class AppEnvironment: ObservableObject {
         let resolver = CoverURLResolver(libraryRoot: libraryRoot)
         library = LibraryRepository(database, coverResolver: resolver)
         history = HistoryRepository(database, coverResolver: resolver)
-        sources = SourceRegistry(sources: [LocalSource(libraryRoot: libraryRoot)])
+        let client = URLSessionHTTPClient()
+        let mangaDex = MangaDexSource(client: client, settings: {
+            AppSettings.currentNetworkSettings(isExpensive: NetworkPathMonitor.isExpensiveSnapshot)
+        })
+        let registry = SourceRegistry(sources: [mangaDex, LocalSource(libraryRoot: libraryRoot)])
+        sources = registry
+        updater = LibraryUpdater(library: library, sources: registry)
+        let caches = (try? fm.url(for: .cachesDirectory, in: .userDomainMask, appropriateFor: nil, create: true))
+            ?? fm.temporaryDirectory
+        let browseDirectory = caches.appendingPathComponent("browse", isDirectory: true)
+        try? fm.createDirectory(at: browseDirectory, withIntermediateDirectories: true)
+        browseCache = BrowseCache(directory: browseDirectory)
         importer = ImportService(libraryRoot: libraryRoot, library: library)
         if databaseFellBack {
             Task { [toast] in

@@ -58,14 +58,25 @@ final class AppSettings: ObservableObject {
     static let readingModeKey = "defaultReadingMode"
     static let keepScreenOnKey = "keepScreenOn"
 
-    @AppStorage("appearance") var appearance: String = AppearanceOption.system.rawValue
+    @AppStorage("appearance") var appearance: String = AppearanceOption.dark.rawValue
     @AppStorage("accentHex") var accentHex: String = AppSettings.defaultAccentHex
     @AppStorage("defaultReadingMode") var defaultReadingMode: String = ReadingMode.rightToLeft.rawValue
     @AppStorage("keepScreenOn") var keepScreenOn: Bool = true
     @AppStorage("cacheLimitMB") var cacheLimitMB: Int = AppSettings.defaultCacheLimitMB
 
+    static let defaultLanguagePriority = "zh,zh-hk,en"
+    static let defaultLanguageOrder = "zh,zh-hk,en,ja"
+
+    @AppStorage("showAdult") var showAdult: Bool = false
+    @AppStorage("adultConfirmed") var adultConfirmed: Bool = false
+    @AppStorage("apiBaseURL") var apiBaseURL: String = ""
+    @AppStorage("uploadsBaseURL") var uploadsBaseURL: String = ""
+    @AppStorage("dataSaverMode") var dataSaverMode: String = "auto"
+    @AppStorage("languagePriority") var languagePriority: String = AppSettings.defaultLanguagePriority
+    @AppStorage("languageOrder") var languageOrder: String = AppSettings.defaultLanguageOrder
+
     var appearanceOption: AppearanceOption {
-        AppearanceOption(rawValue: appearance) ?? .system
+        AppearanceOption(rawValue: appearance) ?? .dark
     }
 
     var accentColor: Color { Color(hexString: accentHex) }
@@ -77,6 +88,42 @@ final class AppSettings: ObservableObject {
 
     static func storedKeepScreenOn() -> Bool {
         UserDefaults.standard.object(forKey: keepScreenOnKey) as? Bool ?? true
+    }
+
+    /// Parses an http(s) URL with a host; trailing slashes are trimmed. Returns nil if invalid.
+    static func validatedURL(_ text: String) -> URL? {
+        var trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        while trimmed.hasSuffix("/") { trimmed.removeLast() }
+        guard let url = URL(string: trimmed),
+              let scheme = url.scheme?.lowercased(),
+              scheme == "http" || scheme == "https",
+              let host = url.host, !host.isEmpty else { return nil }
+        return url
+    }
+
+    /// Builds the network settings from stored preferences. Invalid URLs fall back to defaults.
+    static func currentNetworkSettings(isExpensive: Bool) -> NetworkSettings {
+        let defaults = UserDefaults.standard
+        let base = NetworkSettings.default
+        let api = validatedURL(defaults.string(forKey: "apiBaseURL") ?? "") ?? base.apiBaseURL
+        let customUploads = validatedURL(defaults.string(forKey: "uploadsBaseURL") ?? "")
+        let dataSaver: Bool
+        switch defaults.string(forKey: "dataSaverMode") ?? "auto" {
+        case "on": dataSaver = true
+        case "off": dataSaver = false
+        default: dataSaver = isExpensive
+        }
+        let stored = defaults.string(forKey: "languagePriority") ?? defaultLanguagePriority
+        let languages = stored.split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+        return NetworkSettings(
+            apiBaseURL: api,
+            uploadsBaseURL: customUploads ?? base.uploadsBaseURL,
+            usesCustomUploads: customUploads != nil,
+            dataSaver: dataSaver,
+            languages: languages.isEmpty ? base.languages : languages,
+            showAdult: defaults.bool(forKey: "showAdult"))
     }
 
     static func storedCacheLimitMB() -> Int {
