@@ -282,11 +282,9 @@ final class ReaderViewModel: ObservableObject, ReaderViewControllerDelegate {
 
     // MARK: - History
 
+    /// A transition item maps to the last page of the chapter it ends, so finishing a chapter is sticky.
     private func progress(at index: Int) -> ReadingProgress? {
-        let items = session.items
-        guard items.indices.contains(index), case .page(let chapterId, let page) = items[index] else { return nil }
-        let (_, count) = Self.position(of: index, chapterId: chapterId, in: items)
-        return ReadingProgress(chapterId: chapterId, pageIndex: page.index, pageCount: count, updatedAt: Date())
+        session.progressForSaving(at: index)
     }
 
     /// Debounced (0.5 s) save of the currently shown page.

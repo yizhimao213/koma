@@ -44,6 +44,8 @@ final class ReaderViewController: UIViewController, UICollectionViewDelegateFlow
     private var pendingScrollIndex: Int?
     private var scrollTargetIndex: Int?
     private var isRepositioning = false
+    /// An RTL append that arrived mid-scroll, applied once scrolling stops.
+    private var hasParkedAppend = false
     private var lastViewSize: CGSize = .zero
 
     // Webtoon zoom
@@ -179,6 +181,16 @@ final class ReaderViewController: UIViewController, UICollectionViewDelegateFlow
         let isAppend = !items.isEmpty && newItems.count > items.count
             && Array(newItems.prefix(items.count)) == items
         if isAppend {
+            if ReaderAppendPolicy.shouldDeferAppend(
+                mode: mode,
+                isDragging: collectionView.isDragging,
+                isDecelerating: collectionView.isDecelerating,
+                isAnimatingScroll: scrollTargetIndex != nil
+            ) {
+                hasParkedAppend = true
+                return
+            }
+            hasParkedAppend = false
             let anchor = visibleAnchor()
             items = newItems
             isRepositioning = true
@@ -188,6 +200,7 @@ final class ReaderViewController: UIViewController, UICollectionViewDelegateFlow
             isRepositioning = false
             if let index = reportedIndex { updatePrefetch(around: index) }
         } else {
+            hasParkedAppend = false
             items = newItems
             reportedIndex = nil
             scrollTargetIndex = nil
@@ -682,12 +695,27 @@ final class ReaderViewController: UIViewController, UICollectionViewDelegateFlow
         scrollTargetIndex = nil
     }
 
+    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        if !decelerate {
+            applyParkedAppendIfNeeded()
+        }
+    }
+
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
         updateCurrentIndex()
+        applyParkedAppendIfNeeded()
     }
 
     func scrollViewDidEndScrollingAnimation(_ scrollView: UIScrollView) {
         scrollTargetIndex = nil
         updateCurrentIndex()
+        applyParkedAppendIfNeeded()
+    }
+
+    /// Applies a deferred append now that the collection view is at rest (re-parks if it is still moving).
+    private func applyParkedAppendIfNeeded() {
+        guard hasParkedAppend else { return }
+        hasParkedAppend = false
+        syncItems()
     }
 }

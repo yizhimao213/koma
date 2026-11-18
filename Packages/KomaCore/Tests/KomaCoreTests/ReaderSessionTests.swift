@@ -61,6 +61,31 @@ final class ReaderSessionTests: XCTestCase {
         XCTAssertNil(session.currentProgress)
     }
 
+    func testTransitionMapsToFinishedProgress() async throws {
+        let c1 = chapter("c1", index: 0)
+        let pages = makePages(3)
+        let session = ReaderSession(chapters: [c1], startChapterId: "c1", startPage: 0) { _ in pages }
+        try await session.start()
+        await session.didShow(index: 3)
+        let progress = try XCTUnwrap(session.progressForSaving)
+        XCTAssertEqual(progress.chapterId, "c1")
+        XCTAssertEqual(progress.pageIndex, 2)
+        XCTAssertEqual(progress.pageCount, 3)
+        XCTAssertNil(session.currentProgress)
+    }
+
+    func testProgressForSavingOnPageMatchesCurrentProgress() async throws {
+        let c1 = chapter("c1", index: 0)
+        let pages = makePages(5)
+        let session = ReaderSession(chapters: [c1], startChapterId: "c1", startPage: 1) { _ in pages }
+        try await session.start()
+        let saving = try XCTUnwrap(session.progressForSaving(at: 1))
+        XCTAssertEqual(saving.chapterId, "c1")
+        XCTAssertEqual(saving.pageIndex, 1)
+        XCTAssertEqual(saving.pageCount, 5)
+        XCTAssertNil(session.progressForSaving(at: 99))
+    }
+
     func testJumpResetsItems() async throws {
         let c1 = chapter("c1", index: 0)
         let c2 = chapter("c2", index: 1)

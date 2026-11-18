@@ -84,6 +84,29 @@ public final class ReaderSession: ObservableObject {
             updatedAt: Date())
     }
 
+    /// Progress to persist for the item at `index`. Unlike `currentProgress`, a transition item maps to the
+    /// last page of the chapter it follows, so finishing a chapter is never lost.
+    public func progressForSaving(at index: Int) -> ReadingProgress? {
+        guard items.indices.contains(index) else { return nil }
+        switch items[index] {
+        case .page(let chapterId, let page):
+            return ReadingProgress(
+                chapterId: chapterId,
+                pageIndex: page.index,
+                pageCount: pageCounts[chapterId] ?? 0,
+                updatedAt: Date())
+        case .transition(let from, _):
+            let count = pageCounts[from.id] ?? 0
+            guard count > 0 else { return nil }
+            return ReadingProgress(chapterId: from.id, pageIndex: count - 1, pageCount: count, updatedAt: Date())
+        }
+    }
+
+    /// `progressForSaving(at:)` for the current index.
+    public var progressForSaving: ReadingProgress? {
+        progressForSaving(at: currentIndex)
+    }
+
     // MARK: - Private
 
     private func load(chapterId: String, page: Int) async throws {

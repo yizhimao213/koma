@@ -1,7 +1,8 @@
 import Foundation
 import GRDB
 
-public final class LibraryRepository {
+/// Only holds a thread-safe GRDB `DatabaseWriter`.
+public final class LibraryRepository: @unchecked Sendable {
     private let writer: DatabaseWriter
 
     public init(_ database: AppDatabase) {

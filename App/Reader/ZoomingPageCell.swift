@@ -142,6 +142,9 @@ final class ZoomingPageCell: UICollectionViewCell, UIScrollViewDelegate {
         imageView.frame = CGRect(origin: .zero, size: fitted)
         scrollView.contentSize = imageView.frame.size
         centerImage()
+        // contentInset alone leaves contentOffset at (0, 0), which is out of range until the first touch.
+        let inset = scrollView.contentInset
+        scrollView.contentOffset = CGPoint(x: -inset.left, y: -inset.top)
     }
 
     private func centerImage() {
