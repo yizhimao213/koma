@@ -27,7 +27,7 @@ enum LibrarySortOption: String, CaseIterable, Identifiable {
 
 @MainActor
 final class LibraryViewModel: ObservableObject {
-    @Published private(set) var items: [LibraryItem] = []
+    @Published private(set) var items: [LibraryEntry] = []
     @Published private(set) var categories: [CategoryRecord] = []
     @Published private(set) var hasLoaded = false
     @Published var categoryId: Int64? {
@@ -64,16 +64,16 @@ final class LibraryViewModel: ObservableObject {
         reloadCategories()
     }
 
-    func markAllRead(_ item: LibraryItem) {
+    func markAllRead(_ item: LibraryEntry) {
         guard let chapters = try? library.chapters(for: item.ref) else { return }
         try? library.markRead(chapters, true)
     }
 
-    func move(_ item: LibraryItem, toCategory id: Int64?) {
+    func move(_ item: LibraryEntry, toCategory id: Int64?) {
         try? library.assign(item.ref, to: id.map { [$0] } ?? [])
     }
 
-    func removeFromLibrary(_ item: LibraryItem) {
+    func removeFromLibrary(_ item: LibraryEntry) {
         try? library.setInLibrary(item.ref, false)
     }
 

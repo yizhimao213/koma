@@ -33,23 +33,67 @@ final class MangaDetailViewModel: ObservableObject {
         do {
             let loadedDetails = try await source.details(for: ref)
             let loadedChapters = try await source.chapters(for: ref)
-            try library.upsert(details: loadedDetails, chapters: loadedChapters)
             details = loadedDetails
             chapters = loadedChapters.sorted { $0.index < $1.index }
             errorText = nil
+            await syncDatabase(details: loadedDetails, chapters: loadedChapters)
         } catch {
             errorText = "加载失败"
         }
-        refreshState()
         isLoading = false
     }
 
     /// Re-reads read flags, progress and library membership (e.g. after the reader closes).
     func refreshState() {
-        readIds = Set(chapters.filter { (try? library.isRead($0)) == true }.map(\.id))
-        progress = try? history.progress(for: ref)
-        let items = (try? library.items(categoryId: nil, sort: .added)) ?? []
-        inLibrary = items.contains { $0.ref.sourceId == ref.sourceId && $0.ref.id == ref.id }
+        Task { await reloadState() }
+    }
+
+    /// Upserts off the main actor, and only when needed so the library observation
+    /// does not re-emit during the hero transition.
+    private func syncDatabase(details: MangaDetails, chapters: [Chapter]) async {
+        let library = self.library
+        let history = self.history
+        let ref = self.ref
+        let state = await Task.detached(priority: .userInitiated) { () -> State in
+            let inLibrary = (try? library.isInLibrary(ref)) ?? false
+            let known = (try? library.chapters(for: ref).count) ?? 0
+            if !(inLibrary && known == chapters.count) {
+                try? library.upsert(details: details, chapters: chapters)
+            }
+            return Self.readState(library: library, history: history, ref: ref)
+        }.value
+        apply(state)
+    }
+
+    private func reloadState() async {
+        let library = self.library
+        let history = self.history
+        let ref = self.ref
+        let state = await Task.detached(priority: .userInitiated) {
+            Self.readState(library: library, history: history, ref: ref)
+        }.value
+        apply(state)
+    }
+
+    private struct State {
+        var readIds: Set<String>
+        var progress: ReadingProgress?
+        var inLibrary: Bool
+    }
+
+    private nonisolated static func readState(
+        library: LibraryRepository, history: HistoryRepository, ref: MangaRef
+    ) -> State {
+        State(
+            readIds: (try? library.readChapterIds(for: ref)) ?? [],
+            progress: try? history.progress(for: ref),
+            inLibrary: (try? library.isInLibrary(ref)) ?? false)
+    }
+
+    private func apply(_ state: State) {
+        readIds = state.readIds
+        progress = state.progress
+        inLibrary = state.inLibrary
     }
 
     func toggleLibrary() {

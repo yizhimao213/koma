@@ -72,6 +72,8 @@ struct MangaDetailView: View {
         }
     }
 
+    private var coverURL: URL? { vm.details?.ref.coverURL ?? ref.coverURL }
+
     private var displayedChapters: [Chapter] {
         sortDescending ? Array(vm.chapters.reversed()) : vm.chapters
     }
@@ -82,7 +84,7 @@ struct MangaDetailView: View {
         ZStack {
             Color(.systemBackground)
             GeometryReader { proxy in
-                LazyImage(url: ref.coverURL) { state in
+                LazyImage(url: coverURL) { state in
                     if let image = state.image {
                         image.resizable().aspectRatio(contentMode: .fill)
                     } else {
@@ -180,7 +182,7 @@ struct MangaDetailView: View {
 
     @ViewBuilder
     private var coverView: some View {
-        let cover = CoverImageView(url: ref.coverURL, size: CGSize(width: 390, height: 585))
+        let cover = CoverImageView(url: coverURL, size: CGSize(width: 390, height: 585))
         if let namespace {
             cover.matchedGeometryEffect(id: "\(ref.sourceId)/\(ref.id)", in: namespace)
         } else {

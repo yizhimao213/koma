@@ -35,7 +35,7 @@ public enum LibrarySort: Sendable {
     case lastRead, added, title, unread
 }
 
-public struct LibraryItem: Identifiable, Sendable {
+public struct LibraryEntry: Identifiable, Equatable, Sendable {
     public var ref: MangaRef
     public var unreadCount: Int
     public var lastReadAt: Date?

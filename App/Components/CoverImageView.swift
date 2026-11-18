@@ -13,7 +13,7 @@ struct CoverImageView: View {
             .overlay(
                 LazyImage(url: url) { state in
                     if let image = state.image {
-                        image.resizable().aspectRatio(contentMode: .fill)
+                        FadeInImage(image: image)
                     } else if state.error != nil || url == nil {
                         Image(systemName: "photo")
                             .font(.title2)
@@ -23,8 +23,21 @@ struct CoverImageView: View {
                     }
                 }
                 .processors([.resize(size: size)])
-                .animation(.easeIn(duration: 0.15))
             )
             .clipShape(RoundedRectangle(cornerRadius: Theme.coverRadius, style: .continuous))
+    }
+}
+
+/// Fades the loaded image in over 0.15 s.
+private struct FadeInImage: View {
+    let image: Image
+    @State private var visible = false
+
+    var body: some View {
+        image
+            .resizable()
+            .aspectRatio(contentMode: .fill)
+            .opacity(visible ? 1 : 0)
+            .onAppear { withAnimation(.easeIn(duration: 0.15)) { visible = true } }
     }
 }

@@ -62,18 +62,20 @@ public final class LibraryRepository {
         }
     }
 
-    public func items(categoryId: Int64?, sort: LibrarySort) throws -> [LibraryItem] {
+    public func items(categoryId: Int64?, sort: LibrarySort) throws -> [LibraryEntry] {
         try writer.read { db in
             try LibraryRepository.fetchItems(db, categoryId: categoryId, sort: sort)
         }
     }
 
-    public func observeItems(categoryId: Int64?, sort: LibrarySort) -> AsyncStream<[LibraryItem]> {
+    public func observeItems(categoryId: Int64?, sort: LibrarySort) -> AsyncStream<[LibraryEntry]> {
         let reader: DatabaseReader = writer
         return AsyncStream { continuation in
-            let observation = ValueObservation.tracking { db in
-                try LibraryRepository.fetchItems(db, categoryId: categoryId, sort: sort)
-            }
+            let observation = ValueObservation
+                .tracking { db in
+                    try LibraryRepository.fetchItems(db, categoryId: categoryId, sort: sort)
+                }
+                .removeDuplicates()
             let cancellable = observation.start(
                 in: reader,
                 onError: { _ in continuation.finish() },
@@ -127,6 +129,25 @@ public final class LibraryRepository {
         }
     }
 
+    /// Ids of all read chapters of a manga, in one query.
+    public func readChapterIds(for ref: MangaRef) throws -> Set<String> {
+        try writer.read { db in
+            Set(try String.fetchAll(
+                db,
+                sql: "SELECT id FROM chapter WHERE sourceId = ? AND mangaId = ? AND isRead = 1",
+                arguments: [ref.sourceId, ref.id]))
+        }
+    }
+
+    public func isInLibrary(_ ref: MangaRef) throws -> Bool {
+        try writer.read { db in
+            try Bool.fetchOne(
+                db,
+                sql: "SELECT inLibrary FROM manga WHERE sourceId = ? AND id = ?",
+                arguments: [ref.sourceId, ref.id]) ?? false
+        }
+    }
+
     public func isRead(_ chapter: Chapter) throws -> Bool {
         try writer.read { db in
             try Bool.fetchOne(
@@ -156,7 +177,7 @@ public final class LibraryRepository {
         }
     }
 
-    static func fetchItems(_ db: Database, categoryId: Int64?, sort: LibrarySort) throws -> [LibraryItem] {
+    static func fetchItems(_ db: Database, categoryId: Int64?, sort: LibrarySort) throws -> [LibraryEntry] {
         var sql = """
             SELECT m.sourceId, m.id, m.title, m.coverURL, m.lastReadAt,
                 (SELECT COUNT(*) FROM chapter c
@@ -184,8 +205,8 @@ public final class LibraryRepository {
             break
         }
         let rows = try Row.fetchAll(db, sql: sql, arguments: arguments)
-        var items = rows.map { row -> LibraryItem in
-            LibraryItem(ref: MangaRef(row: row), unreadCount: row["unreadCount"], lastReadAt: row["lastReadAt"])
+        var items = rows.map { row -> LibraryEntry in
+            LibraryEntry(ref: MangaRef(row: row), unreadCount: row["unreadCount"], lastReadAt: row["lastReadAt"])
         }
         if sort == .title {
             items.sort { $0.ref.title.localizedCaseInsensitiveCompare($1.ref.title) == .orderedAscending }

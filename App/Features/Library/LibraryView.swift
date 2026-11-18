@@ -7,7 +7,7 @@ struct LibraryView: View {
     @StateObject private var vm: LibraryViewModel
     @AppStorage("library.columns") private var columns = 3
     @Namespace private var heroNamespace
-    @State private var selected: LibraryItem?
+    @State private var selected: LibraryEntry?
     @State private var showImporter = false
     @State private var showNewCategory = false
 
@@ -139,7 +139,7 @@ struct LibraryView: View {
         }
     }
 
-    private func cell(for item: LibraryItem) -> some View {
+    private func cell(for item: LibraryEntry) -> some View {
         Button {
             Theme.haptic()
             withAnimation(Theme.spring) { selected = item }

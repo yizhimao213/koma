@@ -73,4 +73,27 @@ final class LibraryRepositoryTests: XCTestCase {
         XCTAssertTrue(try repo.isRead(a.1[0]))
         XCTAssertFalse(try repo.isRead(a.1[1]))
     }
+
+    func testReadChapterIds() throws {
+        let repo = LibraryRepository(try AppDatabase.inMemory())
+        let a = makeManga("a", title: "Alpha")
+        let b = makeManga("b", title: "Beta")
+        try repo.upsert(details: a.0, chapters: a.1)
+        try repo.upsert(details: b.0, chapters: b.1)
+        try repo.markRead([a.1[0], a.1[2], b.1[1]], true)
+        XCTAssertEqual(try repo.readChapterIds(for: a.0.ref), ["a-c0", "a-c2"])
+        XCTAssertEqual(try repo.readChapterIds(for: b.0.ref), ["b-c1"])
+    }
+
+    func testIsInLibrary() throws {
+        let repo = LibraryRepository(try AppDatabase.inMemory())
+        let a = makeManga("a", title: "Alpha")
+        XCTAssertFalse(try repo.isInLibrary(a.0.ref))
+        try repo.upsert(details: a.0, chapters: a.1)
+        XCTAssertFalse(try repo.isInLibrary(a.0.ref))
+        try repo.setInLibrary(a.0.ref, true)
+        XCTAssertTrue(try repo.isInLibrary(a.0.ref))
+        try repo.setInLibrary(a.0.ref, false)
+        XCTAssertFalse(try repo.isInLibrary(a.0.ref))
+    }
 }
