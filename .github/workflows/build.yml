@@ -1,0 +1,48 @@
+name: build
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode 15.4
+        run: sudo xcode-select -s /Applications/Xcode_15.4.app
+
+      - name: Test KomaCore
+        run: cd Packages/KomaCore && swift test
+
+      - name: Generate Xcode project
+        run: brew install xcodegen && xcodegen generate
+
+      - name: Build app
+        run: >
+          xcodebuild -project Koma.xcodeproj -scheme Koma
+          -configuration Release -sdk iphoneos -derivedDataPath build
+          CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
+
+      - name: Package IPA
+        run: |
+          mkdir Payload
+          cp -r build/Build/Products/Release-iphoneos/Koma.app Payload/
+          zip -qry Koma.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Koma-ipa
+          path: Koma.ipa
+
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: Koma.ipa

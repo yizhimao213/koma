@@ -1,0 +1,51 @@
+name: Koma
+options:
+  bundleIdPrefix: com.koma
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+packages:
+  KomaCore:
+    path: Packages/KomaCore
+  Nuke:
+    url: https://github.com/kean/Nuke.git
+    from: 12.8.0
+targets:
+  Koma:
+    type: application
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - path: App
+        excludes:
+          - Resources/Info.plist
+    dependencies:
+      - package: KomaCore
+        product: KomaCore
+      - package: Nuke
+        product: Nuke
+      - package: Nuke
+        product: NukeUI
+    settings:
+      base:
+        PRODUCT_NAME: Koma
+        PRODUCT_BUNDLE_IDENTIFIER: com.koma.reader
+        INFOPLIST_FILE: App/Resources/Info.plist
+        GENERATE_INFOPLIST_FILE: NO
+        TARGETED_DEVICE_FAMILY: "1"
+        IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+        SWIFT_VERSION: "5.0"
+        CODE_SIGNING_ALLOWED: NO
+        CODE_SIGNING_REQUIRED: NO
+        CODE_SIGN_IDENTITY: ""
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+schemes:
+  Koma:
+    build:
+      targets:
+        Koma: all
+    run:
+      config: Debug
+    archive:
+      config: Release
