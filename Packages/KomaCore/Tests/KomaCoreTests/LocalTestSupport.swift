@@ -11,9 +11,7 @@ enum LocalTestSupport {
 
     /// Builds a zip at `url` containing the given (path, bytes) entries.
     static func makeZip(at url: URL, entries: [(String, Data)]) throws {
-        guard let archive = try? Archive(url: url, accessMode: .create) else {
-            throw NSError(domain: "LocalTestSupport", code: 1)
-        }
+        let archive = try Archive(url: url, accessMode: .create)
         for (path, data) in entries {
             try archive.addEntry(
                 with: path,

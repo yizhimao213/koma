@@ -114,9 +114,6 @@ public struct LocalImporter {
             throw LocalImportError.noImages
         }
 
-        // Chapter ids must be contiguous in reading order; rename if a chapter was dropped.
-        // (Ids are assigned from chapterMetas.count so they already are contiguous.)
-
         let meta = LocalMangaMeta(
             title: title,
             chapters: chapterMetas,
@@ -243,7 +240,10 @@ public struct LocalImporter {
 
     /// Extracts image entries in natural path order as 0001.ext, 0002.ext, ...
     private static func extractImages(fromArchive url: URL, to dir: URL) throws -> Int {
-        guard let archive = try? Archive(url: url, accessMode: .read) else {
+        let archive: Archive
+        do {
+            archive = try Archive(url: url, accessMode: .read)
+        } catch {
             throw LocalImportError.unsupportedType(url.lastPathComponent)
         }
 
