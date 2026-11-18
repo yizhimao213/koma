@@ -30,6 +30,8 @@ final class LibraryViewModel: ObservableObject {
     @Published private(set) var items: [LibraryEntry] = []
     @Published private(set) var categories: [CategoryRecord] = []
     @Published private(set) var hasLoaded = false
+    /// Most recent history entry whose chapter still resolves; drives the 继续阅读 card.
+    @Published private(set) var continueItem: HistoryItem?
     @Published var categoryId: Int64? {
         didSet { if oldValue != categoryId { restartObservation() } }
     }
@@ -43,10 +45,17 @@ final class LibraryViewModel: ObservableObject {
 
     private static let sortKey = "library.sort"
     private let library: LibraryRepository
+    private let history: HistoryRepository
+    private let updater: LibraryUpdater
+    private let toast: ToastCenter
     private var observeTask: Task<Void, Never>?
+    private var continueToken = 0
 
-    init(library: LibraryRepository) {
+    init(library: LibraryRepository, history: HistoryRepository, updater: LibraryUpdater, toast: ToastCenter) {
         self.library = library
+        self.history = history
+        self.updater = updater
+        self.toast = toast
         let stored = UserDefaults.standard.string(forKey: Self.sortKey)
         self.sort = stored.flatMap(LibrarySortOption.init(rawValue:)) ?? .lastRead
         reloadCategories()
@@ -75,6 +84,49 @@ final class LibraryViewModel: ObservableObject {
 
     func removeFromLibrary(_ item: LibraryEntry) {
         try? library.setInLibrary(item.ref, false)
+    }
+
+    /// Reloads the continue-reading entry off the main thread.
+    func reloadContinue() {
+        continueToken += 1
+        let token = continueToken
+        let history = self.history
+        let library = self.library
+        Task {
+            let item = await Task.detached(priority: .userInitiated) { () -> HistoryItem? in
+                let recent = (try? history.recent(limit: 20)) ?? []
+                for entry in recent {
+                    let chapters = ((try? library.chapters(for: entry.0)) ?? []).sorted { $0.index < $1.index }
+                    if chapters.contains(where: { $0.id == entry.1.chapterId }) {
+                        return HistoryItem(ref: entry.0, progress: entry.1, chapters: chapters)
+                    }
+                }
+                return nil
+            }.value
+            guard token == continueToken else { return }
+            continueItem = item
+        }
+    }
+
+    /// Checks every library title for new chapters and reports the outcome with a toast.
+    func refreshLibrary() async {
+        let result = await updater.refreshAll()
+        toast.show(Self.refreshMessage(for: result))
+        reloadContinue()
+    }
+
+    static func refreshMessage(for result: LibraryUpdateResult) -> String {
+        let updated = result.updatedMangaCount
+        let failed = result.failedCount
+        if updated > 0 && failed > 0 {
+            return "\(updated) 部漫画有更新，\(failed) 部失败"
+        } else if updated > 0 {
+            return "\(updated) 部漫画有更新"
+        } else if failed > 0 {
+            return "\(failed) 部更新失败"
+        } else {
+            return "已是最新"
+        }
     }
 
     private func restartObservation() {

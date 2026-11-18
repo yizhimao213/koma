@@ -8,25 +8,27 @@ struct EmptyStateView: View {
     let action: (() -> Void)?
 
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 18) {
             Image(systemName: symbol)
-                .font(.system(size: 44, weight: .light))
+                .font(.system(size: 34, weight: .regular))
                 .foregroundColor(accent)
-                .frame(width: 96, height: 96)
-                .background(Circle().fill(accent.opacity(0.12)))
+                .frame(width: 88, height: 88)
+                .background(Circle().fill(Theme.Palette.elevated))
+                .overlay(Circle().strokeBorder(Theme.Palette.hairline, lineWidth: Theme.hairlineWidth))
             Text(title)
-                .font(.headline)
-                .foregroundColor(.secondary)
+                .font(Theme.Typography.body.weight(.medium))
+                .foregroundColor(Theme.Palette.secondary)
+                .multilineTextAlignment(.center)
             if let actionTitle, let action {
                 Button {
                     Theme.haptic()
                     action()
                 } label: {
                     Text(actionTitle)
-                        .font(.subheadline.weight(.semibold))
+                        .font(Theme.Typography.body.weight(.semibold))
                         .foregroundColor(.white)
-                        .padding(.horizontal, 22)
-                        .padding(.vertical, 10)
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 11)
                         .background(Capsule().fill(accent))
                 }
                 .buttonStyle(.pressable)
