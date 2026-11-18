@@ -63,11 +63,14 @@ public struct PageRef: Hashable, Codable, Sendable {
     public var index: Int
     public var url: URL
     public var headers: [String: String]
+    /// Alternate image host tried when `url` fails to load.
+    public var fallbackURL: URL?
 
-    public init(index: Int, url: URL, headers: [String: String] = [:]) {
+    public init(index: Int, url: URL, headers: [String: String] = [:], fallbackURL: URL? = nil) {
         self.index = index
         self.url = url
         self.headers = headers
+        self.fallbackURL = fallbackURL
     }
 }
 
