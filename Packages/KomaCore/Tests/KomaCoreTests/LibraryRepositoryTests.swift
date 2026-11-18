@@ -156,6 +156,37 @@ final class LibraryRepositoryTests: XCTestCase {
                        "/containerB/Documents/Library/m1/c0001/0001.jpg")
     }
 
+    func testUpsertPruneMissing() throws {
+        let repo = LibraryRepository(try AppDatabase.inMemory())
+        let a = makeManga("a", title: "Alpha")
+        try repo.upsert(details: a.0, chapters: a.1)
+        try repo.setInLibrary(a.0.ref, true)
+        let b = makeManga("b", title: "Beta")
+        try repo.upsert(details: b.0, chapters: b.1)
+        try repo.upsert(details: a.0, chapters: Array(a.1.prefix(2)), pruneMissing: true)
+        XCTAssertEqual(try repo.chapters(for: a.0.ref).count, 2)
+        XCTAssertEqual(try repo.items(categoryId: nil, sort: .title).first?.unreadCount, 2)
+        XCTAssertEqual(try repo.chapters(for: b.0.ref).count, 3)
+    }
+
+    func testUpsertWithoutPruneKeeps() throws {
+        let repo = LibraryRepository(try AppDatabase.inMemory())
+        let a = makeManga("a", title: "Alpha")
+        try repo.upsert(details: a.0, chapters: a.1)
+        try repo.upsert(details: a.0, chapters: Array(a.1.prefix(2)))
+        XCTAssertEqual(try repo.chapters(for: a.0.ref).count, 3)
+    }
+
+    func testLibraryRefsOnlyInLibrary() throws {
+        let repo = LibraryRepository(try AppDatabase.inMemory())
+        let a = makeManga("a", title: "Alpha")
+        let b = makeManga("b", title: "Beta")
+        try repo.upsert(details: a.0, chapters: a.1)
+        try repo.upsert(details: b.0, chapters: b.1)
+        try repo.setInLibrary(a.0.ref, true)
+        XCTAssertEqual(try repo.libraryRefs().map(\.id), ["a"])
+    }
+
     func testRemoteCoverPassesThrough() throws {
         let resolver = CoverURLResolver(libraryRoot: URL(fileURLWithPath: "/x/Library"))
         let url = URL(string: "https://example.com/c.jpg")

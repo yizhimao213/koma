@@ -11,7 +11,9 @@ public final class LibraryRepository: @unchecked Sendable {
         self.coverResolver = coverResolver
     }
 
-    public func upsert(details: MangaDetails, chapters: [Chapter]) throws {
+    /// Inserts or updates a manga and its chapters. With `pruneMissing`, chapters of this manga
+    /// that are absent from `chapters` are deleted in the same transaction.
+    public func upsert(details: MangaDetails, chapters: [Chapter], pruneMissing: Bool = false) throws {
         let tagsData = try JSONEncoder().encode(details.tags)
         let tagsJSON = String(data: tagsData, encoding: .utf8) ?? "[]"
         let storedCover = coverResolver.storedString(for: details.ref.coverURL)
@@ -44,6 +46,37 @@ public final class LibraryRepository: @unchecked Sendable {
                         chapter.title, chapter.number, chapter.index
                     ])
             }
+            if pruneMissing {
+                let keep = Set(chapters.map(\.id))
+                let existing = try String.fetchAll(
+                    db,
+                    sql: "SELECT id FROM chapter WHERE sourceId = ? AND mangaId = ?",
+                    arguments: [details.ref.sourceId, details.ref.id])
+                for id in existing where !keep.contains(id) {
+                    try db.execute(
+                        sql: "DELETE FROM chapter WHERE sourceId = ? AND mangaId = ? AND id = ?",
+                        arguments: [details.ref.sourceId, details.ref.id, id])
+                }
+            }
+        }
+    }
+
+    /// All in-library manga with resolved cover URLs.
+    public func libraryRefs() throws -> [MangaRef] {
+        let resolver = coverResolver
+        return try writer.read { db in
+            try Row.fetchAll(db, sql: "SELECT sourceId, id, title, coverURL FROM manga WHERE inLibrary = 1")
+                .map { MangaRef(row: $0, resolver: resolver) }
+        }
+    }
+
+    /// Ids of the chapters currently stored for a manga.
+    func chapterIds(for ref: MangaRef) throws -> Set<String> {
+        try writer.read { db in
+            Set(try String.fetchAll(
+                db,
+                sql: "SELECT id FROM chapter WHERE sourceId = ? AND mangaId = ?",
+                arguments: [ref.sourceId, ref.id]))
         }
     }
 

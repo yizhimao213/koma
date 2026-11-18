@@ -74,7 +74,7 @@ public struct PageRef: Hashable, Codable, Sendable {
     }
 }
 
-public struct MangaPage: Sendable {
+public struct MangaPage: Codable, Sendable {
     public var items: [MangaRef]
     public var hasNextPage: Bool
 
