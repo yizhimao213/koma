@@ -47,7 +47,14 @@ public final class LibraryRepository: @unchecked Sendable {
                     ])
             }
             if pruneMissing {
-                let keep = Set(chapters.map(\.id))
+                var keep = Set(chapters.map(\.id))
+                // Keep the chapter the history row points to, even if upstream dropped it.
+                if let historyChapter = try String.fetchOne(
+                    db,
+                    sql: "SELECT chapterId FROM history WHERE sourceId = ? AND mangaId = ?",
+                    arguments: [details.ref.sourceId, details.ref.id]) {
+                    keep.insert(historyChapter)
+                }
                 let existing = try String.fetchAll(
                     db,
                     sql: "SELECT id FROM chapter WHERE sourceId = ? AND mangaId = ?",

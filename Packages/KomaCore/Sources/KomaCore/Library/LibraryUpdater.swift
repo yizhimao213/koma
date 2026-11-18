@@ -91,6 +91,8 @@ public final class LibraryUpdater: @unchecked Sendable {
             let details = try await source.details(for: ref)
             let chapters = try await source.chapters(for: ref)
             let before = try library.chapterIds(for: ref)
+            // An empty list for a manga that had chapters is treated as a bad response, not a wipe.
+            if chapters.isEmpty && !before.isEmpty { return .failed }
             try library.upsert(details: details, chapters: chapters, pruneMissing: true)
             let added = chapters.filter { !before.contains($0.id) }.count
             return added > 0 ? .updated(newChapters: added) : .unchanged

@@ -65,7 +65,19 @@ final class LibraryUpdaterTests: XCTestCase {
         XCTAssertEqual(try repo.chapters(for: ref).map(\.id), ["c1", "c2"])
     }
 
-    func testUpdaterSkipsLocal() async throws {
+    func testUpdaterEmptyChapterListDoesNotWipe() async throws {
+        let repo = LibraryRepository(try AppDatabase.inMemory())
+        let ref = try seed(repo, sourceId: "stub", id: "m1", chapterIds: ["c1", "c2", "c3"])
+        let chapters = try repo.chapters(for: ref)
+        try repo.markRead([chapters[0]], true)
+        let source = UpdaterStubSource(id: "stub", chapterIds: [], shouldFail: false, recorder: CallRecorder())
+        let result = await LibraryUpdater(library: repo, sources: SourceRegistry(sources: [source])).refreshAll()
+        XCTAssertEqual(result.failedCount, 1)
+        XCTAssertEqual(try repo.chapters(for: ref).count, 3)
+        XCTAssertTrue(try repo.isRead(chapters[0]))
+    }
+
+    func testUpdaterSkipsLocal()async throws {
         let repo = LibraryRepository(try AppDatabase.inMemory())
         let ref = try seed(repo, sourceId: "local", id: "l1", chapterIds: ["c1"])
         let recorder = CallRecorder()

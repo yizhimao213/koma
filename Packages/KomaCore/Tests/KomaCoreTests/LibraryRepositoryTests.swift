@@ -169,7 +169,20 @@ final class LibraryRepositoryTests: XCTestCase {
         XCTAssertEqual(try repo.chapters(for: b.0.ref).count, 3)
     }
 
-    func testUpsertWithoutPruneKeeps() throws {
+    func testPruneKeepsHistoryChapter() throws {
+        let db = try AppDatabase.inMemory()
+        let repo = LibraryRepository(db)
+        let history = HistoryRepository(db)
+        let a = makeManga("a", title: "Alpha")
+        try repo.upsert(details: a.0, chapters: a.1)
+        try history.save(a.0.ref, progress: ReadingProgress(chapterId: "a-c2", pageIndex: 1, pageCount: 10))
+        try repo.upsert(details: a.0, chapters: Array(a.1.prefix(2)), pruneMissing: true)
+        XCTAssertTrue(try repo.chapters(for: a.0.ref).contains { $0.id == "a-c2" })
+        let recent = try history.recent(limit: 5)
+        XCTAssertEqual(recent.first?.1.chapterId, "a-c2")
+    }
+
+    func testUpsertWithoutPruneKeeps()throws {
         let repo = LibraryRepository(try AppDatabase.inMemory())
         let a = makeManga("a", title: "Alpha")
         try repo.upsert(details: a.0, chapters: a.1)
