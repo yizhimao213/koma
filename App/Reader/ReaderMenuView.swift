@@ -3,6 +3,7 @@ import KomaCore
 
 /// Reader overlay: top bar (back + titles) and bottom panel (page slider, chapters, mode, brightness).
 struct ReaderMenuView: View {
+    @Environment(\.accentColor) private var accent
     @ObservedObject var model: ReaderViewModel
     @ObservedObject var pageState: ReaderPageState
     let onClose: () -> Void
@@ -102,7 +103,7 @@ struct ReaderMenuView: View {
                         }
                         isScrubbing = editing
                     })
-                    .tint(Theme.accent)
+                    .tint(accent)
                     .disabled(pageState.count <= 1)
                 Text(pageState.count > 0 ? "\(displayedPage + 1) / \(pageState.count)" : " ")
                     .font(.caption.monospacedDigit())
@@ -145,12 +146,12 @@ struct ReaderMenuView: View {
                         Text(Self.label(for: mode))
                             .font(.caption2)
                     }
-                    .foregroundColor(selected ? Theme.accent : .white.opacity(0.75))
+                    .foregroundColor(selected ? accent : .white.opacity(0.75))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 8)
                     .background(
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .fill(selected ? Theme.accent.opacity(0.18) : Color.white.opacity(0.06)))
+                            .fill(selected ? accent.opacity(0.18) : Color.white.opacity(0.06)))
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.pressable)

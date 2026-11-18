@@ -18,6 +18,7 @@ struct RootTabView: View {
                 .tabItem { Label("设置", systemImage: "gearshape") }
         }
         .tint(settings.accentColor)
+        .environment(\.accentColor, settings.accentColor)
         .preferredColorScheme(settings.appearanceOption.colorScheme)
         .overlay { ToastHost(center: env.toast) }
     }

@@ -2,6 +2,7 @@ import SwiftUI
 import KomaCore
 
 struct BrowseView: View {
+    @Environment(\.accentColor) private var accent
     @EnvironmentObject private var env: AppEnvironment
 
     var body: some View {
@@ -17,7 +18,7 @@ struct BrowseView: View {
                                 .foregroundColor(.white)
                                 .frame(width: 44, height: 44)
                                 .background(
-                                    RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Theme.accent))
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous).fill(accent))
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(source.name)
                                     .font(.body.weight(.medium))

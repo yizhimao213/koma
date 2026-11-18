@@ -34,6 +34,7 @@ struct ReaderContainerView: View {
 }
 
 private struct ReaderScreen: View {
+    @Environment(\.accentColor) private var accent
     @StateObject private var model: ReaderViewModel
     @Environment(\.dismiss) private var dismiss
 
@@ -79,7 +80,7 @@ private struct ReaderScreen: View {
                         Task { await model.start() }
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(Theme.accent)
+                    .tint(accent)
                     Button("关闭") { close() }
                         .buttonStyle(.bordered)
                         .tint(.white)

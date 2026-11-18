@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct EmptyStateView: View {
+    @Environment(\.accentColor) private var accent
     let symbol: String
     let title: String
     let actionTitle: String?
@@ -10,9 +11,9 @@ struct EmptyStateView: View {
         VStack(spacing: 16) {
             Image(systemName: symbol)
                 .font(.system(size: 44, weight: .light))
-                .foregroundColor(Theme.accent)
+                .foregroundColor(accent)
                 .frame(width: 96, height: 96)
-                .background(Circle().fill(Theme.accent.opacity(0.12)))
+                .background(Circle().fill(accent.opacity(0.12)))
             Text(title)
                 .font(.headline)
                 .foregroundColor(.secondary)
@@ -26,7 +27,7 @@ struct EmptyStateView: View {
                         .foregroundColor(.white)
                         .padding(.horizontal, 22)
                         .padding(.vertical, 10)
-                        .background(Capsule().fill(Theme.accent))
+                        .background(Capsule().fill(accent))
                 }
                 .buttonStyle(.pressable)
             }

@@ -71,6 +71,7 @@ private struct HistoryRoute: Identifiable {
 }
 
 struct HistoryView: View {
+    @Environment(\.accentColor) private var accent
     @StateObject private var vm: HistoryViewModel
     @State private var route: HistoryRoute?
 
@@ -113,6 +114,7 @@ struct HistoryView: View {
                 chapters: route.item.chapters,
                 startChapterId: route.item.progress.chapterId,
                 startPage: route.item.progress.pageIndex)
+            .environment(\.accentColor, accent)
         }
     }
 

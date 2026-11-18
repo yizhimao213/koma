@@ -9,6 +9,7 @@ private struct ReaderRoute: Identifiable {
 }
 
 struct MangaDetailView: View {
+    @Environment(\.accentColor) private var accent
     let ref: MangaRef
     let namespace: Namespace.ID?
     let onClose: (() -> Void)?
@@ -69,6 +70,7 @@ struct MangaDetailView: View {
                 chapters: vm.chapters,
                 startChapterId: route.chapterId,
                 startPage: route.page)
+            .environment(\.accentColor, accent)
         }
     }
 
@@ -125,10 +127,10 @@ struct MangaDetailView: View {
                     if let status = vm.details?.status, status != .unknown {
                         Text(status == .ongoing ? "连载中" : "已完结")
                             .font(.caption.weight(.semibold))
-                            .foregroundColor(Theme.accent)
+                            .foregroundColor(accent)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 3)
-                            .background(Capsule().fill(Theme.accent.opacity(0.14)))
+                            .background(Capsule().fill(accent.opacity(0.14)))
                     }
                 }
                 Spacer(minLength: 0)
@@ -160,7 +162,7 @@ struct MangaDetailView: View {
                         .lineLimit(descriptionExpanded ? nil : 3)
                     Text(descriptionExpanded ? "收起" : "展开")
                         .font(.caption.weight(.semibold))
-                        .foregroundColor(Theme.accent)
+                        .foregroundColor(accent)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())
@@ -203,7 +205,7 @@ struct MangaDetailView: View {
                     .lineLimit(1)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 13)
-                    .background(Capsule().fill(Theme.accent))
+                    .background(Capsule().fill(accent))
             }
             .buttonStyle(.pressable)
             .disabled(vm.chapters.isEmpty)
@@ -218,11 +220,11 @@ struct MangaDetailView: View {
                     Text(vm.inLibrary ? "已在书架" : "加入书架")
                 }
                 .font(.subheadline.weight(.semibold))
-                .foregroundColor(vm.inLibrary ? .secondary : Theme.accent)
+                .foregroundColor(vm.inLibrary ? .secondary : accent)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 13)
                 .background(
-                    Capsule().fill(vm.inLibrary ? Color(.secondarySystemFill) : Theme.accent.opacity(0.14)))
+                    Capsule().fill(vm.inLibrary ? Color(.secondarySystemFill) : accent.opacity(0.14)))
             }
             .buttonStyle(.pressable)
         }
@@ -244,7 +246,7 @@ struct MangaDetailView: View {
                     Text(sortDescending ? "倒序" : "正序")
                 }
                 .font(.subheadline)
-                .foregroundColor(Theme.accent)
+                .foregroundColor(accent)
             }
             .buttonStyle(.plain)
         }
@@ -279,7 +281,7 @@ struct MangaDetailView: View {
             } label: {
                 Label(isRead ? "标记未读" : "标记已读", systemImage: isRead ? "circle" : "checkmark.circle")
             }
-            .tint(Theme.accent)
+            .tint(accent)
         }
     }
 }

@@ -3,6 +3,7 @@ import UniformTypeIdentifiers
 import KomaCore
 
 struct LibraryView: View {
+    @Environment(\.accentColor) private var accent
     @EnvironmentObject private var env: AppEnvironment
     @StateObject private var vm: LibraryViewModel
     @AppStorage("library.columns") private var columns = 3
@@ -119,7 +120,7 @@ struct LibraryView: View {
                 .foregroundColor(isSelected ? .white : .primary)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 7)
-                .background(Capsule().fill(isSelected ? Theme.accent : Color(.secondarySystemFill)))
+                .background(Capsule().fill(isSelected ? accent : Color(.secondarySystemFill)))
         }
         .buttonStyle(.pressable)
     }
@@ -154,7 +155,7 @@ struct LibraryView: View {
                                 .foregroundColor(.white)
                                 .padding(.horizontal, 7)
                                 .padding(.vertical, 3)
-                                .background(Capsule().fill(Theme.accent))
+                                .background(Capsule().fill(accent))
                                 .padding(6)
                         }
                     }
@@ -227,6 +228,7 @@ struct LibraryView: View {
 }
 
 private struct NewCategorySheet: View {
+    @Environment(\.accentColor) private var accent
     let onCreate: (String) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var name = ""
@@ -248,7 +250,7 @@ private struct NewCategorySheet: View {
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
-                    .background(Capsule().fill(Theme.accent))
+                    .background(Capsule().fill(accent))
             }
             .buttonStyle(.pressable)
             .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)

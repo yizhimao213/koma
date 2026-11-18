@@ -36,3 +36,15 @@ struct PressableStyle: ButtonStyle {
 extension ButtonStyle where Self == PressableStyle {
     static var pressable: PressableStyle { PressableStyle() }
 }
+
+private struct AccentColorKey: EnvironmentKey {
+    static let defaultValue = Theme.accent
+}
+
+extension EnvironmentValues {
+    /// The user-selected accent color (see AppSettings); defaults to coral.
+    var accentColor: Color {
+        get { self[AccentColorKey.self] }
+        set { self[AccentColorKey.self] = newValue }
+    }
+}
