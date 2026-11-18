@@ -35,7 +35,13 @@ enum AppTab: String, CaseIterable, Identifiable {
 @MainActor
 final class TabBarVisibility: ObservableObject {
     @Published private(set) var isHidden = false
+    @Published private(set) var keyboardVisible = false
     private var hiders = Set<UUID>()
+
+    /// Bottom inset tab content reserves; collapses while the bar is hidden or the keyboard is up.
+    var contentInset: CGFloat {
+        isHidden || keyboardVisible ? 0 : FloatingTabBar.reservedHeight
+    }
 
     func set(_ hidden: Bool, for token: UUID) {
         if hidden {
@@ -44,7 +50,13 @@ final class TabBarVisibility: ObservableObject {
             hiders.remove(token)
         }
         let next = !hiders.isEmpty
-        if next != isHidden { isHidden = next }
+        guard next != isHidden else { return }
+        withAnimation(Theme.spring) { isHidden = next }
+    }
+
+    func setKeyboardVisible(_ visible: Bool) {
+        guard visible != keyboardVisible else { return }
+        withAnimation(.easeOut(duration: 0.25)) { keyboardVisible = visible }
     }
 }
 

@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import Combine
 
 struct RootTabView: View {
     @EnvironmentObject private var env: AppEnvironment
@@ -25,10 +26,17 @@ struct RootTabView: View {
                 .offset(y: tabBar.isHidden ? 140 : 0)
                 .opacity(tabBar.isHidden ? 0 : 1)
                 .allowsHitTesting(!tabBar.isHidden)
+                .accessibilityHidden(tabBar.isHidden)
                 .animation(Theme.spring, value: tabBar.isHidden)
                 .ignoresSafeArea(.keyboard, edges: .bottom)
         }
         .background(Theme.Palette.background.ignoresSafeArea())
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
+            tabBar.setKeyboardVisible(true)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+            tabBar.setKeyboardVisible(false)
+        }
         .environmentObject(tabBar)
         .tint(settings.accentColor)
         .environment(\.accentColor, settings.accentColor)
@@ -39,7 +47,7 @@ struct RootTabView: View {
     private func page<Content: View>(_ tab: AppTab, @ViewBuilder content: () -> Content) -> some View {
         content()
             .safeAreaInset(edge: .bottom, spacing: 0) {
-                Color.clear.frame(height: FloatingTabBar.reservedHeight)
+                Color.clear.frame(height: tabBar.contentInset)
             }
             .toolbar(.hidden, for: .tabBar)
             .tag(tab)

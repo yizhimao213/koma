@@ -103,7 +103,8 @@ final class LibraryViewModel: ObservableObject {
                 }
                 return nil
             }.value
-            guard token == continueToken else { return }
+            // Publish only real changes so tab switches and hero transitions don't re-render the view.
+            guard token == continueToken, item != continueItem else { return }
             continueItem = item
         }
     }

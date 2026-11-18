@@ -343,7 +343,7 @@ struct LibraryView: View {
             LazyVGrid(columns: gridColumns, spacing: 20) {
                 ForEach(displayedItems) { item in
                     cell(for: item, decodeSize: cellSize)
-                        .fadeInOnAppear()
+                        .fadeInOnAppear(once: item.id)
                 }
             }
             .padding(.horizontal, Self.horizontalPadding)

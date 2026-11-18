@@ -1,7 +1,7 @@
 import SwiftUI
 import KomaCore
 
-struct HistoryItem: Identifiable {
+struct HistoryItem: Identifiable, Equatable {
     let ref: MangaRef
     let progress: ReadingProgress
     let chapters: [Chapter]

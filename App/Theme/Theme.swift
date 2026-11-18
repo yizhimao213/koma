@@ -109,9 +109,42 @@ private struct FadeInOnAppear: ViewModifier {
     }
 }
 
+/// Ids that have already faded in, so lazily recycled cells don't fade (and flicker) again.
+/// Only touched from view code on the main thread.
+private enum FadeRegistry {
+    static var seen = Set<AnyHashable>()
+}
+
+private struct FadeInOnce: ViewModifier {
+    let id: AnyHashable
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var visible: Bool
+
+    init(id: AnyHashable) {
+        self.id = id
+        _visible = State(initialValue: FadeRegistry.seen.contains(id))
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(visible ? 1 : 0)
+            .offset(y: visible || reduceMotion ? 0 : 8)
+            .onAppear {
+                guard !visible else { return }
+                FadeRegistry.seen.insert(id)
+                withAnimation(.easeOut(duration: 0.28)) { visible = true }
+            }
+    }
+}
+
 extension View {
     func fadeInOnAppear() -> some View {
         modifier(FadeInOnAppear())
+    }
+
+    /// Fades in only the first time a view with `id` appears during this app session.
+    func fadeInOnAppear<ID: Hashable>(once id: ID) -> some View {
+        modifier(FadeInOnce(id: AnyHashable(id)))
     }
 
     /// Rounded card surface with the hairline border used throughout the app.
