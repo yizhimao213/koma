@@ -106,6 +106,8 @@ final class MangaDexSourceTests: XCTestCase {
         let request = try XCTUnwrap(client.requests.first)
         XCTAssertEqual(value(request, "title"), "one piece")
         XCTAssertEqual(values(request, "status[]"), ["ongoing"])
+        XCTAssertEqual(value(request, "order[relevance]"), "desc")
+        XCTAssertNil(value(request, "order[followedCount]"))
     }
 
     func testAdultPicksThrowsWhenDisabled() async {
@@ -137,6 +139,43 @@ final class MangaDexSourceTests: XCTestCase {
         XCTAssertEqual(featured.count, 8)
         XCTAssertEqual(featured.first?.id, "m-0")
         XCTAssertEqual(value(try XCTUnwrap(client.requests.first), "offset"), "0")
+    }
+
+    func testFeaturedNeverIncludesAdultRatings() async throws {
+        let list = MangaDexFixtures.list([MangaDexFixtures.manga()], total: 1)
+        let (source, client) = makeSource(settings: settings(adult: true)) { _ in list }
+        _ = try await source.featured()
+        let request = try XCTUnwrap(client.requests.first)
+        XCTAssertEqual(values(request, "contentRating[]"), ["safe", "suggestive"])
+    }
+
+    func testTransportCancelledMapsToCancellationError() async {
+        let (source, _) = makeSource { _ in throw URLError(.cancelled) }
+        do {
+            _ = try await source.popular(page: 1)
+            XCTFail("expected cancellation")
+        } catch {
+            XCTAssertTrue(error is CancellationError)
+        }
+    }
+
+    func testDecodesEmptyLocalizedMapsAndNullAttributes() async throws {
+        let item = """
+        {"id":"r1","type":"manga","attributes":{"title":{"en":"Robust"},"altTitles":[{},{"zh":"稳健"}],"description":[],"status":"ongoing","contentRating":"safe","tags":[{"id":"t","type":"tag","attributes":{"name":[]}}]},"relationships":[{"id":"c","type":"cover_art","attributes":{"fileName":"r.jpg"}},{"id":"a","type":"author","attributes":null}]}
+        """
+        let list = MangaDexFixtures.list([item], total: 1)
+        let detail = MangaDexFixtures.detail(item)
+        let (source, _) = makeSource { request in
+            request.url?.path == "/manga" ? list : detail
+        }
+        let page = try await source.popular(page: 1)
+        let ref = try XCTUnwrap(page.items.first)
+        XCTAssertEqual(ref.title, "稳健")
+        XCTAssertEqual(ref.coverURL?.absoluteString, "https://uploads.mangadex.org/covers/r1/r.jpg.512.jpg")
+        let details = try await source.details(for: ref)
+        XCTAssertNil(details.description)
+        XCTAssertTrue(details.tags.isEmpty)
+        XCTAssertNil(details.author)
     }
 
     // MARK: parsing

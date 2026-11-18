@@ -39,7 +39,7 @@ public final class MangaDexSource: MangaSource, @unchecked Sendable {
         let builder = MangaDexRequestBuilder(settings: s)
         let request = builder.mangaList(
             page: page,
-            order: .followedCount,
+            order: .relevance,
             ratings: builder.browseRatings,
             title: query,
             status: filters["status"]
@@ -48,7 +48,14 @@ public final class MangaDexSource: MangaSource, @unchecked Sendable {
     }
 
     public func featured() async throws -> [MangaRef] {
-        Array(try await popular(page: 1).items.prefix(8))
+        // Hero carousel is always safe-only, even when 18+ is enabled.
+        let s = settings()
+        let builder = MangaDexRequestBuilder(settings: s)
+        let page = try await fetchList(
+            builder.mangaList(page: 1, order: .followedCount, ratings: MangaDexRequestBuilder.safeRatings),
+            settings: s
+        )
+        return Array(page.items.prefix(8))
     }
 
     public func adultPicks(page: Int) async throws -> MangaPage {
@@ -140,6 +147,8 @@ public final class MangaDexSource: MangaSource, @unchecked Sendable {
             if error.statusCode == 404 { throw SourceError.notFound }
             throw SourceError.network("HTTP \(error.statusCode)")
         } catch is CancellationError {
+            throw CancellationError()
+        } catch let error as URLError where error.code == .cancelled {
             throw CancellationError()
         } catch let error as SourceError {
             throw error

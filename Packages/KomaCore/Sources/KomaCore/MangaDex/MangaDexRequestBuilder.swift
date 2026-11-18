@@ -3,6 +3,7 @@ import Foundation
 enum MangaDexOrder {
     case followedCount
     case latestUploadedChapter
+    case relevance
 }
 
 struct MangaDexRequestBuilder {
@@ -35,6 +36,8 @@ struct MangaDexRequestBuilder {
             items.append(URLQueryItem(name: "order[followedCount]", value: "desc"))
         case .latestUploadedChapter:
             items.append(URLQueryItem(name: "order[latestUploadedChapter]", value: "desc"))
+        case .relevance:
+            items.append(URLQueryItem(name: "order[relevance]", value: "desc"))
         }
         items.append(URLQueryItem(name: "hasAvailableChapters", value: "true"))
         for language in settings.languages {
